@@ -1,6 +1,9 @@
 # build dir
 /out
 
+# valgrind
+vgcore.*
+
 # vscode
 .vscode/*
 !.vscode/settings.json
