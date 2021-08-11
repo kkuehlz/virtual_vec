@@ -1,0 +1,67 @@
+#!/bin/bash
+set -x
+
+WORKING_DIR=`realpath $(dirname $0)`
+BUILD_DIR="$WORKING_DIR/out"
+FILES="virtual_vec.cpp main.cpp"
+
+DEBUG_BINARY="$BUILD_DIR/run_debug"
+TEST_BINARY="$BUILD_DIR/run_tests"
+BENCH_BINARY="$BUILD_DIR/run_bench"
+
+mkdir -p "$BUILD_DIR"
+
+CC="g++"
+FLAGS="-Wall -Werror -std=c++20"
+DEBUG_FLAGS="-g -o $DEBUG_BINARY"
+TEST_FLAGS="-lgtest -lgtest_main -DTEST=1 -o $TEST_BINARY"
+BENCH_FLAGS="-O2 -lbenchmark -lbenchmark_main -DBENCH=1 -o $BENCH_BINARY"
+
+MEMCHECK="valgrind --tool=memcheck --show-reachable=yes --leak-check=yes"
+
+cleanup () {
+  rmdir "$WORKING_DIR/out" 2>/dev/null
+}
+
+print_usage () {
+  echo "Usage: execute [debug|test|bench|clean]"
+  cleanup
+  exit 1
+}
+
+if [[ "$#" -ne 1 ]]; then
+  print_usage
+fi
+
+case $1 in
+  debug)
+    EXTRA_FLAGS="$DEBUG_FLAGS"
+    EXECUTE="$DEBUG_BINARY"
+    ;;
+  test)
+    EXTRA_FLAGS="$TEST_FLAGS"
+    EXECUTE="$TEST_BINARY"
+    ;;
+  test-valgrind)
+    EXTRA_FLAGS="$TEST_FLAGS"
+    EXECUTE="$MEMCHECK $TEST_BINARY"
+    ;;
+  bench)
+    EXTRA_FLAGS="$BENCH_FLAGS"
+    EXECUTE="$BENCH_BINARY"
+    ;;
+  clean)
+    rm -rf $BUILD_DIR
+    exit 1
+    ;;
+  *)
+    echo "Invalid command: $1"
+    print_usage
+    ;;
+esac
+
+COMPILE="$CC $FLAGS $EXTRA_FLAGS $FILES"
+eval $COMPILE
+if [[ $? == 0 ]]; then
+  $EXECUTE
+fi
