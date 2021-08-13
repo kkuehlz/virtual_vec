@@ -8,8 +8,8 @@
 
 namespace {
 
-// Uninitialized is similar to std::move(InputIt, InputIt, OutputIt) but works with
-// initialized and uninitialized memory of type T.
+// Utility class that implements basic operations on initialized and
+// uninitialized blocks of memory of type T.
 template<typename T>
 struct Uninitialized {
 

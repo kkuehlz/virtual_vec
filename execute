@@ -13,7 +13,7 @@ mkdir -p "$BUILD_DIR"
 CC="g++"
 FLAGS="-Wall -Werror -std=c++20"
 TEST_FLAGS="-g -lgtest -lgtest_main -DTEST=1 -o $TEST_BINARY"
-BENCH_FLAGS="-O2 -lbenchmark -lbenchmark_main -DBENCH=1 -o $BENCH_BINARY"
+BENCH_FLAGS="-O2 -lbenchmark -lbenchmark_main -D_NO_QUERY_PAGE_SIZE=1 -DBENCH=1 -o $BENCH_BINARY"
 
 MEMCHECK="valgrind --tool=memcheck --show-reachable=yes --leak-check=yes"
 
