@@ -12,8 +12,13 @@
 
 #ifdef TEST
 
-// We use std::string for testing nontrivial classes.
-static_assert(std::is_trivial<std::string>::value == false);
+// For testing nontrivial classes
+template <class... Args>
+static inline std::string make_non_sso_string(Args&&... args) {
+    static_assert(std::is_trivial<std::string>::value == false);
+    std::string s("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" + std::forward<std::string>(args)...);
+    return s;
+}
 
 TEST(VirtualVectorTest, TestSizeSimple) {
     virtual_vec<int> v;
@@ -61,7 +66,7 @@ TEST(VirtualVectorTest, TestInitializerList) {
 }
 
 TEST(VirtualVectorTest, TestCopy) {
-    virtual_vec<std::string> v0{"one", "two"};
+    virtual_vec<std::string> v0{make_non_sso_string("one"), make_non_sso_string("two")};
     virtual_vec<std::string> v1(v0);
     ASSERT_EQ(v0.size(), v1.size());
     virtual_vec<std::string> v2 = v1;
@@ -72,20 +77,20 @@ TEST(VirtualVectorTest, TestCopy) {
 }
 
 TEST(VirtualVectorTest, TestMove) {
-    virtual_vec<std::string> v0{"one"};
+    virtual_vec<std::string> v0{make_non_sso_string("one")};
     virtual_vec<std::string> v1(std::move(v0));
     EXPECT_TRUE(v0.size() == 0);
     ASSERT_TRUE(v1.size() == 1);
-    ASSERT_TRUE(v1[0] == "one");
-    virtual_vec<std::string> v3{"three"};
+    ASSERT_TRUE(v1[0] == make_non_sso_string("one"));
+    virtual_vec<std::string> v3{make_non_sso_string("three")};
     v0 = std::move(v3);
     EXPECT_TRUE(v3.size() == 0);
     ASSERT_TRUE(v0.size() == 1);
-    ASSERT_TRUE(v0[0] == "three");
+    ASSERT_TRUE(v0[0] == make_non_sso_string("three"));
 }
 
 TEST(VirtualVectorTest, TestFillConstructor) {
-    std::string t("test");
+    std::string t(make_non_sso_string("test"));
     virtual_vec<std::string> v(10, t);
     ASSERT_EQ(10, v.size());
     for (const auto& s : v) {
@@ -94,12 +99,19 @@ TEST(VirtualVectorTest, TestFillConstructor) {
 }
 
 TEST(VirtualVectorTest, TestEmplace) {
-    virtual_vec<std::string> v{"one", "two", "three", "five", "six"};
-    auto new_it = v.emplace(v.begin() + 3, "four");
+    virtual_vec<std::string> v{
+        make_non_sso_string("one"),
+        make_non_sso_string("two"),
+        make_non_sso_string("three"),
+        make_non_sso_string("five"),
+        make_non_sso_string("six")
+    };
+    virtual_vec<std::string> expected = v;
+    auto new_it = v.emplace(v.begin() + 3, make_non_sso_string("four"));
     ASSERT_EQ(6, v.size());
-    ASSERT_EQ(*new_it, std::string("four"));
+    ASSERT_EQ(*new_it, make_non_sso_string("four"));
     auto it = v.begin();
-    for (const auto& s : {"one", "two", "three", "four", "five", "six"} ){
+    for (const auto& s : { make_non_sso_string("one"), make_non_sso_string("two"), make_non_sso_string("three"), make_non_sso_string("four"), make_non_sso_string("five"), make_non_sso_string("six")} ){
         EXPECT_EQ(*it++, s);
     }
 }
@@ -118,25 +130,25 @@ TEST(VirtualVectorTest, TestEmplaceBounds) {
 
 TEST(VirtualVectorTest, TestEmplaceEmpty) {
     virtual_vec<std::string> v0;
-    auto v0_it = v0.emplace(v0.begin(), "v0");
-    ASSERT_EQ(*v0_it, std::string("v0"));
+    auto v0_it = v0.emplace(v0.begin(), make_non_sso_string("v0"));
+    ASSERT_EQ(*v0_it, make_non_sso_string("v0"));
     ASSERT_EQ(1, v0.size());
 
     virtual_vec<std::string> v1;
-    auto v1_it = v1.emplace(v1.end(), "v1");
-    ASSERT_EQ(*v1_it, std::string("v1"));
+    auto v1_it = v1.emplace(v1.end(), make_non_sso_string("v1"));
+    ASSERT_EQ(*v1_it, make_non_sso_string("v1"));
     ASSERT_EQ(1, v1.size());
 }
 
 TEST(VirtualVectorTest, TestEmplaceBack) {
     virtual_vec<std::string> v;
-    v.emplace_back("Hello");
-    std::string s("cruel");
+    v.emplace_back(make_non_sso_string("Hello"));
+    std::string s = make_non_sso_string("cruel");
     v.emplace_back(std::move(s));
-    v.emplace_back(std::string("world"));
-    EXPECT_TRUE("Hello" == v[0]);
-    EXPECT_TRUE("cruel" == v[1]);
-    EXPECT_TRUE("world" == v[2]);
+    v.emplace_back(make_non_sso_string("world"));
+    EXPECT_TRUE(make_non_sso_string("Hello") == v[0]);
+    EXPECT_TRUE(make_non_sso_string("cruel") == v[1]);
+    EXPECT_TRUE(make_non_sso_string("world") == v[2]);
 }
 
 TEST(VirtualVectorTest, TestInsertList) {
@@ -151,12 +163,12 @@ TEST(VirtualVectorTest, TestInsertList) {
 }
 
 TEST(VirtualVectorTest, TestInsertFill) {
-  virtual_vec<std::string> v{"start", "end"};
-  std::string filler("filler");
+  virtual_vec<std::string> v{make_non_sso_string("start"), make_non_sso_string("end")};
+  std::string filler = make_non_sso_string("filler");
   v.insert(v.begin() + 1, 5, filler);
   ASSERT_EQ(7, v.size());
-  EXPECT_EQ(std::string("start"), v.front());
-  EXPECT_EQ(std::string("end"), v.back());
+  EXPECT_EQ(make_non_sso_string("start"), v.front());
+  EXPECT_EQ(make_non_sso_string("end"), v.back());
   for (size_t i = 1; i < 6; i++) {
       EXPECT_EQ(filler, v[i]);
   }
@@ -164,15 +176,15 @@ TEST(VirtualVectorTest, TestInsertFill) {
 
 TEST(VirtualVectorTest, TestInsertListEmpty) {
     virtual_vec<std::string> v0, v1;
-    v0.insert(v0.begin(), { "hello" });
+    v0.insert(v0.begin(), { make_non_sso_string("hello") });
     ASSERT_EQ(1, v0.size());
-    ASSERT_EQ(std::string("hello"), v0[0]);
+    ASSERT_EQ(make_non_sso_string("hello"), v0[0]);
 
-    std::vector<std::string> sample {"world"};
+    std::vector<std::string> sample {make_non_sso_string("world")};
     v1.insert(v1.end(), sample.begin(), sample.end());
     ASSERT_EQ(1, v1.size());
-    ASSERT_EQ(std::string("world"), sample[0]);
-    ASSERT_EQ(std::string("world"), v1[0]);
+    ASSERT_EQ(make_non_sso_string("world"), sample[0]);
+    ASSERT_EQ(make_non_sso_string("world"), v1[0]);
 }
 
 TEST(VirtualVectorTest, TestLargePushBack) {
@@ -239,8 +251,8 @@ TEST(VirtualVectorTest, TestEraseNontrivial) {
     virtual_vec<std::string> myvec;
     std::vector<std::string> stlvec;
     for (int i = 0; i < 20; i++) {
-        myvec.emplace_back(std::to_string(i));
-        stlvec.emplace_back(std::to_string(i));
+        myvec.emplace_back(make_non_sso_string(std::to_string(i)));
+        stlvec.emplace_back(make_non_sso_string(std::to_string(i)));
     }
 
     auto erase0 = myvec.erase(myvec.begin() + 1, myvec.begin() + 6);
@@ -251,12 +263,6 @@ TEST(VirtualVectorTest, TestEraseNontrivial) {
     for (size_t i = 0; i < myvec.size(); i++) {
         ASSERT_EQ(stlvec[i], myvec[i]);
     }
-}
-
-TEST(VirtualVectorTest, EraseCondition1) {
-    virtual_vec<int> v{1, 2, 3};
-    auto it = v.erase(v.begin() + 2);
-    ASSERT_EQ(v.end(), it);
 }
 
 TEST(VirtualVectorTest, EnsureShrinkOccurs) {
@@ -279,11 +285,11 @@ TEST(VirtualVectorTest, TestSwap) {
 }
 
 TEST(VirtualVectorTest, TestResizeMore) {
-    virtual_vec<std::string> v{"one"};
-    std::string filler("two");
+    virtual_vec<std::string> v{make_non_sso_string("one")};
+    std::string filler = make_non_sso_string("two");
     v.resize(3, filler);
     ASSERT_EQ(v.size(), 3);
-    ASSERT_EQ(std::string("one"), v[0]);
+    ASSERT_EQ(make_non_sso_string("one"), v[0]);
     for (size_t i = 1; i < v.size(); i++) {
         EXPECT_EQ(filler, v[i]);
     }

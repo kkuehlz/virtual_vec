@@ -6,6 +6,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <stdexcept>
+#include <type_traits>
 #include <utility>
 
 namespace {
@@ -24,8 +25,7 @@ template<class InputIterator, class OutputIterator>
 static inline void copy(InputIterator first, InputIterator last, OutputIterator d_first) {
     for (; first != last; first++, d_first++) {
         d_first->~T();
-        new (d_first) T;
-        *d_first = *first;
+        new (d_first) T(*first);
     }
 }
 
@@ -33,8 +33,7 @@ template<class InputIterator, class OutputIterator>
 static inline void move(InputIterator first, InputIterator last, OutputIterator d_first) {
     for (; first != last; first++, d_first++) {
         d_first->~T();
-        new (d_first) T;
-        *d_first = std::move(*first);
+        new (d_first) T(std::move(*first));
     }
 }
 
@@ -42,8 +41,7 @@ template<class InputIterator, class OutputIterator>
 static inline void move_backward(InputIterator first, InputIterator last, OutputIterator d_last) {
     for (; first != last; last--, d_last--) {
         d_last->~T();
-        new (d_last) T;
-        *d_last = std::move(*last);
+        new (d_last) T(std::move(*last));
     }
 }
 
@@ -52,8 +50,7 @@ static inline OutputIterator fill_n(OutputIterator first, Size count, const T& v
 {
     for (Size i = 0; i < count; i++, first++) {
         first->~T();
-        new (first) T;
-        *first = value;
+        new (first) T(value);
     }
     return first;
 }
@@ -118,6 +115,7 @@ class virtual_vec {
 
  public:
     virtual_vec() = default;
+    ~virtual_vec() { clear(); }
 
     explicit virtual_vec(size_type count, const T& value) : count_(count) { init_empty_fill(count, value); }
     explicit virtual_vec(size_type count) : count_(count)                 { init_empty_fill(count, T()); }
@@ -169,7 +167,11 @@ class virtual_vec {
     inline size_type max_size()             const noexcept { return Memory::avail_mem() / sizeof(T); }
     inline size_type capacity()             const noexcept { return capacity_in_bytes() / sizeof(T); }
     inline void reserve(size_type new_cap)                 { reserve_in_bytes(new_cap * sizeof(T)); }
-    void shrink_to_fit()                                   { return memory_.shrink(size() * sizeof(T)); }
+    void shrink_to_fit() {
+        auto new_size = size() * sizeof(T);
+        deinit_until(new_size);
+        return memory_.shrink(new_size);
+    }
 
     inline iterator begin()                 const noexcept { return memory_ptr(); }
     inline const_iterator cbegin()          const noexcept { return memory_ptr(); }
@@ -206,7 +208,7 @@ class virtual_vec {
         return _first;
     }
 
-    inline void clear ()                             noexcept  { count_ = 0; }
+    inline void clear()                              noexcept  { deinit_range(begin(), end()); count_ = 0; }
     inline void push_back(const value_type& value)             { emplace_back(value); }
     inline void push_back(value_type&& value)                  { emplace_back(std::forward<T>(value));}
     inline void pop_back()                                     { erase(std::prev(end())); }
@@ -218,7 +220,9 @@ class virtual_vec {
     void resize(size_type count, const value_type& value) {
         if (size() < count) {
             reserve(count);
-            Uninitialized<T>::fill_n(end(), count, value);
+            Uninitialized<T>::fill_n(end(), count - size(), value);
+        } else if (size() > count) {
+            deinit_from(count);
         }
         count_ = count;
     }
@@ -227,8 +231,7 @@ class virtual_vec {
     reference emplace_back(Args&&... args) {
         reserve(size() + 1);
         T* ptr = &memory_ptr()[count_];
-        new (ptr) T;
-        *ptr = T(std::forward<Args>(args)...);
+        new (ptr) T(std::forward<Args>(args)...);
         count_ += 1;
         return *ptr;
     }
@@ -269,9 +272,16 @@ class virtual_vec {
     }
 
  private:
+  constexpr inline bool needs_deinit()                            { return !std::is_trivial<T>::value; }
   inline T* memory_ptr()                           const noexcept { return reinterpret_cast<T*>(memory_.pointer()); }
   inline size_type capacity_in_bytes()             const noexcept { return memory_.num_bytes(); }
   inline void reserve_in_bytes(size_type new_cap)                 { if (capacity_in_bytes() < new_cap) memory_.grow(new_cap); }
+
+  inline void deinit_range(iterator start, iterator end)          { if (needs_deinit()) for (; start != end; start++) start->~T(); }
+  inline void deinit_from(iterator start)                         { deinit_range(start, end()); }
+  inline void deinit_from(size_type offset)                       { deinit_range(&this->operator[](offset), end()); }
+  inline void deinit_until(iterator end)                          { deinit_range(begin(), end); }
+  inline void deinit_until(size_type offset)                      { deinit_range(begin(), &this->operator[](offset)); }
 
   inline void init_empty_fill(size_type count, const T& value) {
       reserve(count);
