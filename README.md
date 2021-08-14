@@ -2,17 +2,17 @@
 
 ### Overview
 
-`virtual_vec` is a type compatible with `std::vector<T>`. The implementation targets large vectors that are pushed to frequently and guarantees `O(1)` for appending to the end.
+`virtual_vec` is a type compatible with `std::vector<T>`. The implementation targets large vectors that are pushed to frequently and guarantees `O(1)` for appending to the end. Do note the purpose of this implementation is experimentation, and it has not been tested in a production system.
 
 ##### Strategy
 
 When the vector is instantiated, it reserves a large chunk of virtual memory addresses from the operating system. Memory from this address space is committed to our process as the vector grows. We never have to copy the entire vector to a new address space.
 
-This implementation is hardcoded to use 4GB virtual address for each vector, so you can have billions of these per process. For obvious reasons this is only applicable to 64-bit systems.
+This implementation is hardcoded to use 4GB virtual address for each vector, so you can have billions of these per process. The number was chosen arbitrarily and can be made bigger or smaller depending on your use case. For obvious reasons this is only applicable to 64-bit systems.
 
 ### Building
 
-NOTE: Right now this only builds on Linux. To build this you just need to include `virtual_vec.h` and `virtual_vec.cpp` and a C++20 compiler.
+NOTE: Right now this only builds on Linux (would gladly accept patches to support other OSes). To build this you just need to include `virtual_vec.h` and `virtual_vec.cpp` and a c++17 (or newer) compiler.
 
 #### Running tests
 
