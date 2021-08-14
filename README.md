@@ -50,6 +50,8 @@ Below is a table of benchmarks comparing the performance of `virtual_vec<int64_t
 
 All benchmarks are performed on a `Intel i7-8665U (8) @ 4.800GHz`. Time is recorded in CPU time.
 
+One thing to keep in mind is these benchmarks were done with `-O2`. With `-O3` std::vector gets 10% faster.
+
 | Storage size  | std::vector (ns)       | virtual_vec (ns)       | diff (%) |
 | ------------- | ---------------------- | ---------------------- | -------- |
 | 512B          | 1221                   | 755                    | 38       |
