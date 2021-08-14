@@ -57,5 +57,5 @@ esac
 COMPILE="$CC $FLAGS $EXTRA_FLAGS $FILES"
 eval $COMPILE
 if [[ $? == 0 ]]; then
-  $EXECUTE
+  exec $EXECUTE
 fi

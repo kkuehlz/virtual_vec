@@ -10,6 +10,11 @@ When the vector is instantiated, it reserves a large chunk of virtual memory add
 
 This implementation is hardcoded to use 4GB virtual address for each vector, so you can have thousands of these per process. The number was chosen arbitrarily and can be made bigger or smaller depending on your use case. For obvious reasons this is only applicable to 64-bit systems.
 
+##### Should I use this or something like it?
+
+This implementation is just for fun. Your mileage will vary platform to platform. If you are on a system that overcommits memory, like Linux, then you should use `std::vector<T>::reserve(4ULL << 30)` and you will get the best possible performance. If not, you should always run benchmarks, because you can incur large page fault penalties when bypassing the user space allocator (this is why reserve on Linux with `std::vector` is the best of both worlds).
+
+
 ### Building
 
 NOTE: Right now this only builds on Linux (would gladly accept patches to support other OSes). To build this you just need to include `virtual_vec.h` and `virtual_vec.cpp` and a c++17 (or newer) compiler.
